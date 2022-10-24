@@ -12,7 +12,7 @@ import pandas as pd
 import numpy as np
 import os
 
-name = 'terra_aod'
+name = 'aqua_aod'
 dataPath = f'/moonbow/gleung/satlcc/MODIS/{name}/'
 anaPath = '/moonbow/gleung/satlcc/MODIS_aod_data/'
 
@@ -67,7 +67,7 @@ def download_reproj_data(urls, saveFile):
     out.to_pickle(f"{anaPath}/{saveFile}")
     
 
-for yr in range(2000,2022):
+for yr in range(2019,2021):
     urllist = pd.read_csv(f"{dataPath}file_list_{yr}.txt",header=None)
     urllist.columns = ['url','time']
     urllist['time'] = pd.to_datetime(urllist.time)

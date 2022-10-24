@@ -4,7 +4,7 @@ import os
 import time
 from jug import TaskGenerator,barrier
 
-n='terra_aod'
+n='aqua_aod'
 anaPath = "/moonbow/gleung/satlcc/MODIS_aod_data/"
 savePath =f"/moonbow/gleung/satlcc/MODIS_{n}/"
 
@@ -36,13 +36,13 @@ def take_averages(yr, mo, name):
 
     alldf.to_pickle(f"{savePath}/{name}/20{str(yr).zfill(2)}.pkl")
     
-for yr in range(1,18):
+for yr in range(19,21):
     for mo in range(1,13):
        if not os.path.exists(f"{savePath}/{str(mo).zfill(2)}/20{str(yr).zfill(2)}.pkl"):
           take_averages(yr,mo,str(mo).zfill(2)) 
 
 barrier()
 
-for yr in range(1,18):
+for yr in range(19,21):
     if not os.path.exists(f"{savePath}/annual/20{str(yr).zfill(2)}.pkl"):
         take_averages(yr,1,'annual')
