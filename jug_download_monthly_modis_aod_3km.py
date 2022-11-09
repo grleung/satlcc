@@ -38,8 +38,7 @@ def download_reproj_data(urls, saveFile):
                                  lats = lats_g)
     
     for url,time in zip(urls.url,urls.time):
-        dataset = open_url(url)#url.split('RemoteResources/laads/')[0]+
-                           #url.split('RemoteResources/laads/')[1])
+        dataset = open_url(url)
 
         latitude = dataset['Latitude'][:,:].data
         longitude = dataset['Longitude'][:,:].data 
