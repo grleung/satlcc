@@ -65,6 +65,7 @@ def download_reproj_data(urls, saveFile):
     out = data.groupby(['lat','lon']).aod.agg(['mean','count','std'])
     out.to_pickle(f"{anaPath}/{saveFile}")
     
+    
 
 for yr in range(2019,2021):
     urllist = pd.read_csv(f"{dataPath}file_list_{yr}.txt",header=None)

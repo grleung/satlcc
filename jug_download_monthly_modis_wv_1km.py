@@ -13,9 +13,12 @@ import numpy as np
 import os
 import xarray as xr
 
-name = 'terra_cf'
+name = 'terra_wv'
 dataPath = f'/moonbow/gleung/satlcc/MODIS/{name}/'
-anaPath = '/moonbow/gleung/satlcc/MODIS_data_terra_day/'
+anaPath = '/moonbow/gleung/satlcc/MODIS_data_terra_wv_day/'
+
+if not os.path.exists(anaPath):
+    os.mkdir(anaPath)
 
 if 'terra' in name:
     yrs = range(2001,2021)
@@ -45,45 +48,48 @@ def download_reproj_data(urls, saveFile):
 
         latitude = dataset['Latitude_1'][:,:].data
         longitude = dataset['Longitude_1'][:,:].data #Longitude_1 for 1km
-        cm = dataset['Cloud_Mask_1km'][:,:,0].data
-        cm = vec_binary_repr(cm, width=8)[:,:,0]
-        cm = vec_sub_end(cm)
+        
+        sf = 0.0010000000474974513
 
-        cf = np.ones(cm.shape)
-        cf = np.where(((cm=='001') | (cm=='011')),cf,0)
+        data = dataset.Water_Vapor_Near_Infrared.data[:,:]
+        qc = dataset.Quality_Assurance_Near_Infrared.data[:,:]
+        cld = dataset.Cloud_Mask_QA.data[:,:]
 
-        sf = 0.009999999776482582
-        cot = dataset.Cloud_Optical_Thickness.data[:,:]
-        cot = np.where(((cm=='001') | (cm=='011')) & (cot!=-9999),cot*sf,np.nan)
+        #data is converted into a binary string of 8 bits
+        qc = vec_binary_repr(qc, width=8)[:,:,0]
+        #get last three digits in binary string
+        qc = vec_sub_end(qc,n=4)
 
-        cth = dataset.cloud_top_height_1km.data[:,:]
-        cth = np.where(((cm=='001') | (cm=='011')) & (cth>0),cth,np.nan)
+        #data is converted into a binary string of 8 bits
+        cld = vec_binary_repr(cld, width=8)[:,:]
+        #get last three digits in binary string
+        cld = vec_sub_end(cld)
 
-        df = np.dstack((cf,cot,cth))
+        out = np.where((((qc=='0101') | (qc=='0111')) & (data>0) & ((cld=='111') | (cld=='101'))),
+                        data*sf,np.nan)
+        #correct values last three qc digits will be
+        #0101 (good confidence) or 0111 (very good confidence)
+        #correct values last three cld digits will be
+        #111 (confident clear) or 101 (probably clear)
         
         swathDef = SwathDefinition(lons = longitude, lats = latitude)
 
         out = resample_gauss(swathDef, 
-                               df,
+                               out,
                                gridDef, 
                                radius_of_influence=2000, 
                                sigmas = [1000,1000,1000],
                                fill_value=np.nan)
 
-        out = xr.Dataset(data_vars={'cf':(['lat','lon'],out[:,:,0]),
-                            'cod':(['lat','lon'],out[:,:,1]),
-                            'cth':(['lat','lon'],out[:,:,2])},
-                coords = {'lat':('lat',lats),
-                            'lon':('lon',lons)}).to_dataframe().dropna(how='all')
-
+        out = pd.DataFrame(out,index=lats,columns=lons).stack().dropna().to_frame(name='pwat')
         out['time'] = time
         data.append(out)
         
     data = pd.concat(data)
     data = data.reset_index()
-    data.columns = ['lat','lon','cf','cod','cth','time']
+    data.columns = ['lat','lon','pwat','time']
 
-    out = data.groupby(['lat','lon'])[['cf','cod','cth']].agg(['mean','count','std'])
+    out = data.groupby(['lat','lon']).pwat.agg(['mean','count','std'])
     out.to_pickle(f"{anaPath}/{saveFile}")
     
 

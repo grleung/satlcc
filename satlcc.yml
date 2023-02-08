@@ -7,6 +7,7 @@ dependencies:
   - _openmp_mutex=4.5=2_gnu
   - affine=2.3.1=pyhd8ed1ab_0
   - alsa-lib=1.2.3.2=h166bdaf_0
+  - appdirs=1.4.4=pyh9f0ad1d_0
   - astropy=5.1=py310hde88566_0
   - asttokens=2.0.5=pyhd3eb1b0_0
   - attrs=22.1.0=pyh71513ae_1
@@ -15,17 +16,18 @@ dependencies:
   - blosc=1.21.1=h83bc5f7_3
   - boost-cpp=1.74.0=h6cacc03_7
   - bottle=0.12.18=py_0
+  - branca=0.6.0=pyhd8ed1ab_0
   - brotli=1.0.9=h166bdaf_7
   - brotli-bin=1.0.9=h166bdaf_7
   - brotlipy=0.7.0=py310h5764c6d_1004
   - bzip2=1.0.8=h7f98852_4
   - c-ares=1.18.1=h7f98852_0
-  - ca-certificates=2022.9.24=ha878542_0
+  - ca-certificates=2022.12.7=ha878542_0
   - cached-property=1.5.2=hd8ed1ab_1
   - cached_property=1.5.2=pyha770c72_1
   - cairo=1.16.0=ha12eb4b_1010
   - cartopy=0.20.2=py310hb89acbc_4
-  - certifi=2022.9.24=pyhd8ed1ab_0
+  - certifi=2022.12.7=pyhd8ed1ab_0
   - cffi=1.15.1=py310h255011f_0
   - cfitsio=4.1.0=hd9d235c_0
   - charset-normalizer=2.1.0=pyhd8ed1ab_0
@@ -43,6 +45,8 @@ dependencies:
   - entrypoints=0.4=py310h06a4308_0
   - executing=0.8.3=pyhd3eb1b0_0
   - expat=2.4.8=h27087fc_0
+  - fiona=1.8.21=py310h60a68a4_2
+  - folium=0.14.0=pyhd8ed1ab_0
   - font-ttf-dejavu-sans-mono=2.37=hab24e00_0
   - font-ttf-inconsolata=3.000=h77eed37_0
   - font-ttf-source-code-pro=2.038=h77eed37_0
@@ -53,6 +57,8 @@ dependencies:
   - fonttools=4.35.0=py310h5764c6d_0
   - freetype=2.12.1=hca18f0e_0
   - freexl=1.0.6=h7f98852_0
+  - geopandas=0.12.2=pyhd8ed1ab_0
+  - geopandas-base=0.12.2=pyha770c72_0
   - geos=3.10.2=h9c3ff4c_0
   - geotiff=1.7.1=h509b78c_1
   - gettext=0.19.8.1=h73d1719_1008
@@ -72,6 +78,7 @@ dependencies:
   - ipython=8.4.0=py310h06a4308_0
   - jedi=0.18.1=py310h06a4308_1
   - jinja2=3.1.2=pyhd8ed1ab_1
+  - joblib=1.2.0=pyhd8ed1ab_0
   - jpeg=9e=h166bdaf_2
   - json-c=0.16=hc379101_0
   - jug=2.2.2=pyhd8ed1ab_0
@@ -118,6 +125,7 @@ dependencies:
   - libpq=14.2=h676c864_0
   - librttopo=1.1.0=hf69c175_9
   - libsodium=1.0.18=h7b6447c_0
+  - libspatialindex=1.9.3=h9c3ff4c_4
   - libspatialite=5.0.1=ha867d66_15
   - libsqlite=3.39.2=h753d276_1
   - libssh2=1.10.0=hf14f497_3
@@ -136,21 +144,24 @@ dependencies:
   - llvmlite=0.38.1=py310h58363a5_0
   - lxml=4.8.0=py310h5764c6d_2
   - lz4-c=1.9.3=h9c3ff4c_1
+  - mapclassify=2.5.0=pyhd8ed1ab_1
   - markupsafe=2.1.1=py310h5764c6d_1
   - matplotlib=3.5.2=py310hff52083_1
   - matplotlib-base=3.5.2=py310h5701ce4_1
   - matplotlib-inline=0.1.2=pyhd3eb1b0_2
+  - munch=2.5.0=py_0
   - munkres=1.1.4=pyh9f0ad1d_0
   - mysql-common=8.0.30=h26416b9_0
   - mysql-libs=8.0.30=hbc51c84_0
   - ncurses=6.3=h27087fc_1
   - nest-asyncio=1.5.5=py310h06a4308_0
+  - networkx=3.0=pyhd8ed1ab_0
   - nspr=4.32=h9c3ff4c_1
   - nss=3.78=h2350873_0
   - numba=0.55.2=py310ha5257ce_0
   - numpy=1.22.4=py310h4ef5377_0
   - openjpeg=2.4.0=hb52868f_1
-  - openssl=3.0.5=h166bdaf_2
+  - openssl=3.0.7=h0b41bf4_1
   - packaging=21.3=pyhd8ed1ab_0
   - palettable=3.3.0=py_0
   - pandas=1.4.3=py310h769672d_0
@@ -161,6 +172,7 @@ dependencies:
   - pillow=9.2.0=py310he619898_1
   - pip=22.2.2=pyhd8ed1ab_0
   - pixman=0.40.0=h36c2ea0_0
+  - pooch=1.6.0=pyhd8ed1ab_0
   - poppler=22.04.0=h1434ded_1
   - poppler-data=0.4.11=hd8ed1ab_0
   - postgresql=14.2=hce44dc1_0
@@ -195,9 +207,12 @@ dependencies:
   - qt=5.12.9=ha98a1a1_5
   - rasterio=1.2.10=py310hee62e8a_6
   - readline=8.1.2=h0f457ee_0
+  - regionmask=0.9.0=pyhd8ed1ab_0
   - requests=2.28.1=pyhd8ed1ab_0
   - retry=0.9.2=py_0
   - rioxarray=0.12.0=pyhd8ed1ab_0
+  - rtree=1.0.1=py310hbdcdc62_1
+  - scikit-learn=1.2.1=py310h209a8ca_0
   - scipy=1.9.0=py310hdfbd76f_0
   - setuptools=65.0.1=py310hff52083_0
   - shapely=1.8.2=py310hb974679_1
@@ -207,6 +222,7 @@ dependencies:
   - soupsieve=2.3.2.post1=pyhd8ed1ab_0
   - sqlite=3.39.2=h4ff8645_1
   - stack_data=0.2.0=pyhd3eb1b0_0
+  - threadpoolctl=3.1.0=pyh8a188c0_0
   - tiledb=2.9.5=h3f4058f_0
   - tk=8.6.12=h27826a3_0
   - tornado=6.2=py310h5764c6d_0
@@ -231,6 +247,7 @@ dependencies:
   - xorg-renderproto=0.11.1=h7f98852_1002
   - xorg-xextproto=7.3.0=h7f98852_1002
   - xorg-xproto=7.0.31=h7f98852_1007
+  - xyzservices=2022.9.0=pyhd8ed1ab_0
   - xz=5.2.6=h166bdaf_0
   - yaml=0.2.5=h7f98852_2
   - zeromq=4.3.4=h2531618_0
@@ -239,6 +256,7 @@ dependencies:
   - zstd=1.5.2=h8a70e8d_4
   - pip:
     - docopt==0.6.2
+    - gdal==3.5.0
     - modis-tools==1.0.0
     - pydantic==1.9.2
     - python-cmr==0.8.0a0
