@@ -51,7 +51,7 @@ def download_reproj_data(urls, saveFile):
         
         sf = 0.0010000000474974513
 
-        data = dataset.Water_Vapor_Near_Infrared.data[:,:]
+        d = dataset.Water_Vapor_Near_Infrared.data[:,:]
         qc = dataset.Quality_Assurance_Near_Infrared.data[:,:]
         cld = dataset.Cloud_Mask_QA.data[:,:]
 
@@ -65,8 +65,8 @@ def download_reproj_data(urls, saveFile):
         #get last three digits in binary string
         cld = vec_sub_end(cld)
 
-        out = np.where((((qc=='0101') | (qc=='0111')) & (data>0) & ((cld=='111') | (cld=='101'))),
-                        data*sf,np.nan)
+        out = np.where((((qc=='0101') | (qc=='0111')) & (d>=0) & ((cld=='111') | (cld=='101'))),
+                        d*sf,np.nan)
         #correct values last three qc digits will be
         #0101 (good confidence) or 0111 (very good confidence)
         #correct values last three cld digits will be
@@ -78,7 +78,7 @@ def download_reproj_data(urls, saveFile):
                                out,
                                gridDef, 
                                radius_of_influence=2000, 
-                               sigmas = [1000,1000,1000],
+                               sigmas = 1000,
                                fill_value=np.nan)
 
         out = pd.DataFrame(out,index=lats,columns=lons).stack().dropna().to_frame(name='pwat')

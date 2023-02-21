@@ -12,12 +12,17 @@ import pandas as pd
 import numpy as np
 import os
 
-name = 'aqua_aod'
+name = 'terra_aod'
 dataPath = f'/moonbow/gleung/satlcc/MODIS/{name}/'
-anaPath = '/moonbow/gleung/satlcc/MODIS_aod_data/'
+anaPath = '/moonbow/gleung/satlcc/MODIS_data_terra_aod_day/'
 
 if not os.path.isdir(anaPath):
     os.mkdir(anaPath)
+
+if 'terra' in name:
+    yrs = range(2001,2021)
+else:
+    yrs = range(2003,2021)
 
 def sub_end(d, n=3):
     return(d[-n:])
@@ -50,8 +55,8 @@ def download_reproj_data(urls, saveFile):
         out = resample_gauss(swathDef, 
                                aod,
                                gridDef, 
-                               radius_of_influence=10000, 
-                               sigmas = 5000,
+                               radius_of_influence=2000, 
+                               sigmas = 1000,
                                fill_value=np.nan)
 
         out = pd.DataFrame(out,index=lats,columns=lons).stack().dropna().to_frame(name='aod')
@@ -67,10 +72,15 @@ def download_reproj_data(urls, saveFile):
     
     
 
-for yr in range(2019,2021):
+for yr in yrs:
     urllist = pd.read_csv(f"{dataPath}file_list_{yr}.txt",header=None)
     urllist.columns = ['url','time']
     urllist['time'] = pd.to_datetime(urllist.time)
+
+    if 'day' in anaPath:
+        urllist = urllist[urllist.time.dt.hour<12]
+    else:
+        urllist = urllist[urllist.time.dt.hour>=12]
 
     for month in range(1,13):
         for i in [0,1,2,3,4,5,6,7,8,9,10]:

@@ -4,45 +4,71 @@ import os
 import time
 from jug import TaskGenerator,barrier
 
-n='aqua_aod'
-anaPath = "/moonbow/gleung/satlcc/MODIS_aod_data/"
+n='terra_cf_day'
+dataPath = "/moonbow/gleung/satlcc/MODIS_data_terra_day/"
 savePath =f"/moonbow/gleung/satlcc/MODIS_{n}/"
+
+if 'terra' in n:
+    yrs = range(2001,2021)
+else:
+    yrs = range(2003,2021)
+
+if 'cf' in n:
+    vars = ['cf','cod','cth']
+elif 'wv' in n:
+    vars = ['pwat']
+elif 'aod' in n:
+    vars = ['aod']
 
 if not os.path.isdir(savePath):
     os.mkdir(savePath)
 print(savePath)
+
 @TaskGenerator
 def take_averages(yr, mo, name):
     if name == 'annual':
-        paths = [f"{savePath}{str(m).zfill(2)}/20{str(yr).zfill(2)}.pkl" for m in range(1,13)]
+        paths = [f"{savePath}/{str(m).zfill(2)}/{str(yr)}.pkl" for m in range(1,13)]
     else:
-        paths = [f"{anaPath}{p}" for p in sorted(os.listdir(anaPath)) 
-             if (f"20{str(yr).zfill(2)}_{str(mo).zfill(2)}" in p)]
-    i = 0
+        paths = [f"{dataPath}{p}" for p in sorted(os.listdir(dataPath)) 
+             if (f"{str(yr)}_{str(mo).zfill(2)}" in p)]
 
+    print(name, yr, mo, paths)
+
+    if len(paths)==0:
+        return()
+
+    i = 0
     for p in paths:
         df = pd.read_pickle(p)
+        if name == 'annual':
+            for var in vars:
+                df[f"{var}_mean_count"] = df[var] * df[f'{var}_count']
+        else:
+            for var in vars:
+                df[f"{var}_count"] = df[var]['count']
+                df[f"{var}_mean_count"] = df[var]['mean'] * df[var]['count']
 
-        df['mean_count'] = df['mean'] * df['count']
-
-        df = df[['mean_count','count']]
+            df = df.drop(vars,axis=1)
 
         if i == 0:
             alldf = df.copy()
             i+=1
         else:
             alldf = alldf.add(df, fill_value=0)
-    alldf['mean'] = alldf['mean_count']/alldf['count']
 
-    alldf.to_pickle(f"{savePath}/{name}/20{str(yr).zfill(2)}.pkl")
-    
-for yr in range(19,21):
+    for var in vars:
+        alldf[var] = alldf[f'{var}_mean_count']/alldf[f'{var}_count']
+
+    alldf = alldf[np.concatenate(vars,[f"{var}_count" for var in vars])]
+    alldf.to_pickle(f"{savePath}/{name}/{str(yr)}.pkl")
+ 
+for yr in yrs:
     for mo in range(1,13):
-       if not os.path.exists(f"{savePath}/{str(mo).zfill(2)}/20{str(yr).zfill(2)}.pkl"):
+       if not os.path.exists(f"{savePath}/{str(mo).zfill(2)}/{str(yr)}.pkl"):
           take_averages(yr,mo,str(mo).zfill(2)) 
 
 barrier()
 
-for yr in range(19,21):
-    if not os.path.exists(f"{savePath}/annual/20{str(yr).zfill(2)}.pkl"):
+for yr in yrs:
+    if not os.path.exists(f"{savePath}/annual/{str(yr)}.pkl"):
         take_averages(yr,1,'annual')

@@ -15,7 +15,10 @@ import xarray as xr
 
 name = 'terra_cf'
 dataPath = f'/moonbow/gleung/satlcc/MODIS/{name}/'
-anaPath = '/moonbow/gleung/satlcc/MODIS_data_terra_day/'
+anaPath = '/moonbow/gleung/satlcc/MODIS_data_terra_night/'
+
+if not os.path.isdir(anaPath):
+    os.mkdir(anaPath)
 
 if 'terra' in name:
     yrs = range(2001,2021)
@@ -98,10 +101,9 @@ for yr in yrs:
         urllist = urllist[urllist.time.dt.hour>=12]
 
     for month in range(1,13):
-        for i in [0,1,2,3,4,5,6,7,8,9,10]:
-            urls = urllist[(urllist.time.dt.month==month) & (urllist.time.dt.day>(i*3)) & (urllist.time.dt.day<=((i+1)*3))]
+        for i in np.arange(32):
+            urls = urllist[(urllist.time.dt.month==month) & (urllist.time.dt.day==i)]
             if not os.path.exists(f"{anaPath}/modis_{yr}_{str(month).zfill(2)}_{str(i).zfill(2)}.pkl"):
                 if len(urls)>0:
-                    #print(month,i,len(urls))
                     download_reproj_data(urls,
                                   f"modis_{yr}_{str(month).zfill(2)}_{str(i).zfill(2)}.pkl")
