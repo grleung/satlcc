@@ -1,10 +1,9 @@
+#Aggregating pixels from raw 30m data to 1km data (matching MODIS output).
+
 import os
-import pandas as pd
 import numpy as np
-import matplotlib.pyplot as plt
 import numba as nb
 from jug import TaskGenerator
-
 from PIL import Image
 Image.MAX_IMAGE_PIXELS = None
 
@@ -75,7 +74,7 @@ def run(lat, lon, ns, ew,ave_res,n):
     forest = np.concatenate(forest,axis=0)
     np.save(f"{anaPath}forestcover10km_{str(lat).zfill(2)}{ns}_{str(lon).zfill(3)}{ew}", forest)
 
-forest_thresh=75
+forest_thresh=75#if pixel has less than 75% forest, not considered forest pixel
 ave_res = 320 #32 arcseconds is approximately 1km
 n = 2 #number of chunks to subset (~number of averes km x number of km box)
 
