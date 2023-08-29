@@ -1,15 +1,13 @@
+# Once annual means have been calculated in take_annual_mean_modis.py, we can calculate the forest loss and changes in MODIS parameters.
 
 import os
 import pandas as pd
 import numpy as np
 from astropy.convolution import convolve
 from scipy.ndimage import maximum_filter
-from scipy.spatial.distance import cdist
-import scipy.stats as sts
 pd.options.mode.chained_assignment = None  # default='warn'
-import pyarrow
 from sklearn.neighbors import KDTree
-from jug import TaskGenerator
+from jug import TaskGenerator,barrier
 
 dataPath = '/moonbow/gleung/satlcc/GFC_2021_v1.9/'
 figPath = '/moonbow/gleung/satlcc-figures/deforest_effect/'
@@ -20,8 +18,6 @@ anaPath = '/moonbow/gleung/satlcc/deforest_effect/'
 for path in [figPath,anaPath]:
     if not os.path.isdir(path):
         os.mkdir(path)
-        
-char = 'abcdefghijklmnopqrstuvwxyz'
 
 def mean_within_radius(var,sub,rad=10,ind=('level_0','level_1')):
     data = sub.reset_index().pivot(index=ind[0],columns=ind[1],values=var)
@@ -31,7 +27,7 @@ def mean_within_radius(var,sub,rad=10,ind=('level_0','level_1')):
                              (2*rad+1, 2*rad+1), dtype=int).astype(np.uint8)
     kernel = kernel/np.sum(kernel)
 
-    #astropy is able to handle nan
+    #astropy is able to handle nan values
     out = convolve(data,kernel,
                    boundary='fill',fill_value=np.nan, 
                    nan_treatment='interpolate',
@@ -59,7 +55,7 @@ def max_within_radius(var,sub,rad=10,ind=('level_0','level_1')):
     return(temp[f"{var}_{rad}km_max"])
 
 @TaskGenerator
-def run(yr,name):
+def calc_did(yr,name):
     modisPath = f"/moonbow/gleung/satlcc/MODIS_{name.split('_')[0]}_cf_{name.split('_')[1]}"
     aodPath = f"/moonbow/gleung/satlcc/MODIS_{name.split('_')[0]}_aod_{name.split('_')[1]}"
     wvPath = f"/moonbow/gleung/satlcc/MODIS_{name.split('_')[0]}_wv_{name.split('_')[1]}"
@@ -76,7 +72,6 @@ def run(yr,name):
     sub = alldata[[f"Forest_0"]+ prior]
     #calculate total prior loss before this year
     sub['PriorLoss'] = sub[prior].sum(axis=1)
-    
     
     #read cloud fraction from years before and after this year
     cf_pre = pd.read_pickle(f"{modisPath}/annual/20{str(yr-1).zfill(2)}.pkl")
@@ -161,7 +156,6 @@ def run(yr,name):
     defopts = defopts[n!=0]
     defo = defo.loc[list(zip(defopts[:,0],defopts[:,1]))]
     
-    
     if len(defo)!=0:
         #for each remaining assessment pixel, find control points which are near enough (within 25km)
         #to serve as control for this pixel
@@ -199,12 +193,61 @@ def run(yr,name):
 
         defo.to_parquet(f"{anaPath}/{name}/{yr}.pq", engine='pyarrow')
 
+@TaskGenerator
+def concat_years(name):
+    anaPath = f"/moonbow/gleung/satlcc/deforest_effect/{name}/"
 
-yrs = range(2,20)
-# TERRA goes from 2001-2020, AQUA from 2003-2020
-# DID metric can be calculated for 2002-2019 or 2004-2019, respectively
+    if 'terra' in name:
+        yrs = range(2,20)
+    else:
+        yrs = range(4,20)
 
-for name in ['terra_day','aqua_day']:
+    alldf = []
+        
     for yr in yrs:
-        if os.path.exists(f"/moonbow/gleung/satlcc/MODIS_{name.split('_')[0]}_cf_{name.split('_')[1]}/annual/20{str(yr-1).zfill(2)}.pkl"):
-            run(yr, name)
+        df = pd.read_parquet(f"{anaPath}{yr}.pq")
+
+        df['Loss'] = df[f'Loss_{yr}']
+
+        for dist in range(1,11):
+            df[f'Loss_{dist}km'] = df[f'Loss_{yr}_{dist}km']
+
+        df = df[np.concatenate([
+                                ['PriorLoss','year',],
+                                [f"Loss_{dist}km" for dist in range(1,11)],
+                                [f"did{var}" for var in ['cf','cth','cod']],
+                                [f"{var}_{yr-1}" for var in ['cf','cth','cod']],
+                                [f"{var}_{yr+1}" for var in ['cf','cth','cod']],
+                                ['deltapwat_1km','deltapwat_5km','deltapwat_10km','pipwat_1km','pipwat_5km','pipwat_10km'],
+                                np.concatenate([[[[f"{var}_{dist}km{n}" for var in ['aod','pwat',]] for dist in [1,5,10]] for n in ['','_pre','_post','_mean']]]).flatten()
+                                ]
+                )]
+
+        print(yr, len(df))
+        alldf.append(df)
+
+    alldf = pd.concat(alldf)
+
+    alldf.to_parquet(f"{anaPath}../{name}.pq")
+
+
+for sat in ['terra','aqua']:
+    for time in ['day','night']:
+        if sat=='terra':
+            yrs = range(2,20)
+        else:
+            yrs = range(4,20)
+            
+        name = f"{sat}_{time}"
+
+        for yr in yrs:
+            if os.path.exists(f"/moonbow/gleung/satlcc/MODIS_{name.split('_')[0]}_cf_{name.split('_')[1]}/annual/20{str(yr-1).zfill(2)}.pkl"):
+                calc_did(yr, name)
+
+#once all have been calculated, can concat into one file per satellite and time
+barrier()
+
+for sat in ['terra','aqua']:
+    for time in ['day','night']:
+        name = f"{sat}_{time}"
+        concat_years(name)

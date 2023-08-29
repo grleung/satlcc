@@ -14,6 +14,9 @@ def sub_end(d, n=3):
 vec_sub_end = np.vectorize(sub_end)
 vec_binary_repr = np.vectorize(np.binary_repr)
 
+#offset factor taken from metadata
+sf = 0.009999999776482582
+
 @TaskGenerator
 @retry(delay=1, tries=20, backoff=1.1)
 def download_reproj_data(urls, saveFile):
@@ -37,8 +40,6 @@ def download_reproj_data(urls, saveFile):
         cf = np.ones(cm.shape)
         cf = np.where(((cm=='001') | (cm=='011')),cf,0) #see cloud mask readme
 
-        #offset factor taken from metadata
-        sf = 0.009999999776482582
         cot = dataset.Cloud_Optical_Thickness.data[:,:]
         cot = np.where(((cm=='001') | (cm=='011')) & (cot!=-9999),cot*sf,np.nan)
 

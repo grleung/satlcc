@@ -1,4 +1,4 @@
-#Take downloaded modis data from download_modis_[var].py and get monthly& annual averages
+#Take downloaded modis data from download_modis_[var].py and get monthly & annual averages
 
 import pandas as pd
 import numpy as np
