@@ -100,18 +100,20 @@ def run(yr,name):
             pwat[f"{var}_{dist}km_pre"] = mean_within_radius(var,pwat_pre,dist,ind=('lat','lon'))
             pwat[f"{var}_{dist}km_post"] = mean_within_radius(var,pwat_post,dist,ind=('lat','lon'))
             pwat[f"delta{var}_{dist}km"] = pwat[f"{var}_{dist}km_post"] - pwat[f"{var}_{dist}km_pre"]
-
+            
     pwat.index =  [(round(lat_,3), round(lon_,3)) for lat_, lon_ in pwat.index]
 
     for var in ['pwat_1km','pwat_1km_pre','pwat_1km_post',
                 'pwat_5km','pwat_5km_pre','pwat_5km_post',
                 'pwat_10km','pwat_10km_pre','pwat_10km_post',
-                'deltapwat_1km','deltapwat_5km','deltapwat_10km']:
+                'deltapwat_1km','deltapwat_5km','deltapwat_10km',
+                ]:
         sub[f"{var}"] = sub.index.map(pwat[var])
 
     for dist in [1,5,10]:
-        sub[f'pwat_{dist}km_mean'] = sub[[c for c in sub.columns if f'pwat_{dist}km' in c]].mean(axis=1)
-        
+        sub[f'pwat_{dist}km_mean'] = sub[[c for c in sub.columns if (f'pwat_{dist}km' in c) & ('delta' not in c)]].mean(axis=1)
+        sub[f"pipwat_{dist}km"] = sub[f'deltapwat_{dist}km']/sub[f'pwat_{dist}km_mean']
+
     aod_pre = pd.read_pickle(f"{aodPath}/annual/20{str(yr-1).zfill(2)}.pkl")
     aod = pd.read_pickle(f"{aodPath}/annual/20{str(yr).zfill(2)}.pkl")
     aod_post = pd.read_pickle(f"{aodPath}/annual/20{str(yr+1).zfill(2)}.pkl")
@@ -188,6 +190,8 @@ def run(yr,name):
                                     [f"did{var}" for var in ['cf','cth','cod', 'pwat_1km','pwat_5km','pwat_10km']],
                                     [f"{var}_{yr-1}" for var in ['cf','cth','cod']],
                                     [f"{var}_{yr+1}" for var in ['cf','cth','cod']],
+                                    ['deltapwat_1km','deltapwat_5km','deltapwat_10km'],
+                                    ['pipwat_1km','pipwat_5km','pipwat_10km'],
                                     np.concatenate([[[[f"{var}_{dist}km{n}" for var in ['aod','pwat']] for dist in [1,5,10]] for n in ['','_pre','_post','_mean']]]).flatten()
             ])]
 

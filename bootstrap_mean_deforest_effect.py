@@ -2,6 +2,8 @@ import pandas as pd
 import numpy as np
 from jug import TaskGenerator
 import os
+import shapely.wkt
+import regionmask
 
 binvar = 'Loss_1km'
 res = 0.1
@@ -9,10 +11,7 @@ nsample = 100
 nrepeat = 5000
 
 dataPath = f"/moonbow/gleung/satlcc/deforest_effect/"
-savePath = f"/moonbow/gleung/satlcc/deforest_effect/bootstrapped/"
 
-if not os.path.isdir(savePath):
-    os.mkdir(savePath)
 
 @TaskGenerator
 def bootstrap_mean(sub, var, nsample=100, nrepeat=5000):
@@ -31,8 +30,8 @@ def join(partials, idx, savePath):
     out = list([*partials])
     out = pd.DataFrame(out, index = idx, columns = ['mean','ci25','ci75'])
     out.to_csv(savePath)
-'''
-for name in ['terra_day','terra_night','aqua_day','aqua_night']:
+
+'''for name in ['terra_day','terra_night','aqua_day','aqua_night']:
     for var in ['cf','cth']:
         alldf = pd.read_parquet(f"{dataPath}{name}.pq",
                                 columns=[binvar, f'did{var}'])
@@ -46,13 +45,14 @@ for name in ['terra_day','terra_night','aqua_day','aqua_night']:
 
         join([bootstrap_mean(sub,f"did{var}",nsample,nrepeat) for sub in subs], 
             idx,
-            f"{savePath}{name}_{var}_{binvar}.csv")'''
+            f"{dataPath}/bootstrapped/{name}_{var}_{binvar}.csv")
 
+#By Environmental Variables
 for name in ['aqua_day','terra_day']:
     for var in ['cf','cth']:
         for subname in ['aod_low','aod_high','pwat_low','pwat_high']:
             for dist in ['1km','5km','10km']:
-                svar = f"{subname.split('_')[0]}_{dist}"
+                svar = f"{subname.split('_')[0]}_{dist}_mean"
                 alldf = pd.read_parquet(f"{dataPath}{name}.pq",
                                         columns=[svar, binvar, f'did{var}'])
                 
@@ -71,4 +71,182 @@ for name in ['aqua_day','terra_day']:
 
                 join([bootstrap_mean(sub,f"did{var}",nsample,nrepeat) for sub in subs], 
                     idx,
-                    f"{savePath}{name}_{var}_{binvar}_{subname}_{dist}_deforestyr.csv")
+                    f"{dataPath}/bootstrapped/{name}_{var}_{binvar}_{subname}_{dist}.csv")
+
+#By Region
+regions = pd.read_csv(f"{dataPath}../subregions_definitions.csv")
+regions['WKT'] = [shapely.wkt.loads(s) for s in regions.WKT]
+regions['abbrevs'] = np.arange(1,len(regions)+1).astype(str)
+regions = regionmask.Regions(regions.WKT, names=regions.name, abbrevs=regions.abbrevs)
+borneo = regions[[0,1,2]]
+
+
+for name in ['terra_day','terra_night','aqua_day','aqua_night']:
+    for var in ['cf','cth']:
+        alldf = pd.read_parquet(f"{dataPath}{name}.pq",
+                                columns=[binvar, f'did{var}','year'])
+        alldf.index.names = ['lat','lon']
+        alldf.set_index('year',append=True,inplace=True)
+        alldf = alldf.to_xarray()
+        alldf = alldf.assign(mask = borneo.mask(alldf))
+        alldf = alldf.where(~alldf.mask.isnull())
+        alldf = alldf.to_dataframe().dropna()
+        
+        alldf[f"{binvar}_"] = res*(alldf[binvar]//res)
+        idx = []
+        subs = []
+
+        for i, sub in alldf.groupby(f"{binvar}_"):
+            idx.append(i)
+            subs.append(sub)
+
+        join([bootstrap_mean(sub,f"did{var}",nsample,nrepeat) for sub in subs], 
+            idx,
+            f"{dataPath}/bootstrapped_byregion/{name}_{var}_{binvar}.csv")
+        
+for name in ['aqua_day','terra_day']:
+    for var in ['cf','cth']:
+        for subname in ['aod_low','aod_high','pwat_low','pwat_high']:
+            for dist in ['1km','5km','10km']:
+                svar = f"{subname.split('_')[0]}_{dist}"
+                alldf = pd.read_parquet(f"{dataPath}{name}.pq",
+                                        columns=[svar, binvar, f'did{var}','year'])
+                alldf.index.names = ['lat','lon']
+                alldf.set_index('year',append=True,inplace=True)
+                alldf = alldf.to_xarray()
+                alldf = alldf.assign(mask = borneo.mask(alldf))
+                alldf = alldf.where(~alldf.mask.isnull())
+                alldf = alldf.to_dataframe().dropna()
+                alldf[f"{svar}_perc"] = alldf[svar].rank()/len(alldf)
+
+                if 'low' in subname:
+                    alldf = alldf[alldf[f"{svar}_perc"]<=0.25]
+                else:
+                    alldf = alldf[alldf[f"{svar}_perc"]>0.75]
+
+                alldf[f"{binvar}_"] = res*(alldf[binvar]//res)
+                idx = []
+                subs = []
+
+                for i, sub in alldf.groupby(f"{binvar}_"):
+                    idx.append(i)
+                    subs.append(sub)
+
+                join([bootstrap_mean(sub,f"did{var}",nsample,nrepeat) for sub in subs], 
+                    idx,
+                    f"{dataPath}/bootstrapped_byregion/{name}_{var}_{binvar}_{subname}_{dist}.csv")
+
+'''
+
+
+nsample = 50
+nrepeat = 10000
+
+for name in ['terra_day','terra_night','aqua_day','aqua_night']:
+    for var in ['cf','cth']:
+        alldf = pd.read_parquet(f"{dataPath}{name}.pq",
+                                columns=[binvar, f'did{var}','year'])
+        alldf = alldf.reset_index(names=['lat','lon'])
+        alldf = alldf[(alldf.lat>=8) & (alldf.lat<=26) & (alldf.lon>=95) & (alldf.lon<=111)].dropna()
+        
+        alldf[f"{binvar}_"] = res*(alldf[binvar]//res)
+        idx = []
+        subs = []
+
+        for i, sub in alldf.groupby(f"{binvar}_"):
+            idx.append(i)
+            subs.append(sub)
+
+        join([bootstrap_mean(sub,f"did{var}",nsample,nrepeat) for sub in subs], 
+            idx,
+            f"{dataPath}/bootstrapped_byregion/psea/{name}_{var}_{binvar}.csv")
+        
+for name in ['aqua_day','terra_day']:
+    for var in ['cf','cth']:
+        for subname in ['aod_low','aod_high','pwat_low','pwat_high']:
+            for dist in ['1km','5km','10km']:
+                svar = f"{subname.split('_')[0]}_{dist}"
+                alldf = pd.read_parquet(f"{dataPath}{name}.pq",
+                                        columns=[svar, binvar, f'did{var}','year'])
+                alldf = alldf.reset_index(names=['lat','lon'])
+                alldf = alldf[(alldf.lat>=8) & (alldf.lat<=26) & (alldf.lon>=95) & (alldf.lon<=111)].dropna()
+                alldf[f"{svar}_perc"] = alldf[svar].rank()/len(alldf)
+
+                if 'low' in subname:
+                    alldf = alldf[alldf[f"{svar}_perc"]<=0.25]
+                else:
+                    alldf = alldf[alldf[f"{svar}_perc"]>0.75]
+
+                alldf[f"{binvar}_"] = res*(alldf[binvar]//res)
+                idx = []
+                subs = []
+
+                for i, sub in alldf.groupby(f"{binvar}_"):
+                    idx.append(i)
+                    subs.append(sub)
+
+                join([bootstrap_mean(sub,f"did{var}",nsample,nrepeat) for sub in subs], 
+                    idx,
+                    f"{dataPath}/bootstrapped_byregion/psea/{name}_{var}_{binvar}_{subname}_{dist}.csv")
+                
+regions = pd.read_csv(f"{dataPath}../subregions_definitions.csv")
+regions['WKT'] = [shapely.wkt.loads(s) for s in regions.WKT]
+regions['abbrevs'] = np.arange(1,len(regions)+1).astype(str)
+regions = regionmask.Regions(regions.WKT, names=regions.name, abbrevs=regions.abbrevs)
+sumatra = regions[[3,4,6]]
+
+
+for name in ['terra_day','terra_night','aqua_day','aqua_night']:
+    for var in ['cf','cth']:
+        alldf = pd.read_parquet(f"{dataPath}{name}.pq",
+                                columns=[binvar, f'did{var}','year'])
+        alldf.index.names = ['lat','lon']
+        alldf.set_index('year',append=True,inplace=True)
+        alldf = alldf.to_xarray()
+        alldf = alldf.assign(mask = sumatra.mask(alldf))
+        alldf = alldf.where(~alldf.mask.isnull())
+        alldf = alldf.to_dataframe().dropna()
+        
+        alldf[f"{binvar}_"] = res*(alldf[binvar]//res)
+        idx = []
+        subs = []
+
+        for i, sub in alldf.groupby(f"{binvar}_"):
+            idx.append(i)
+            subs.append(sub)
+
+        join([bootstrap_mean(sub,f"did{var}",nsample,nrepeat) for sub in subs], 
+            idx,
+            f"{dataPath}/bootstrapped_byregion/sumatra/{name}_{var}_{binvar}.csv")
+        
+for name in ['aqua_day','terra_day']:
+    for var in ['cf','cth']:
+        for subname in ['aod_low','aod_high','pwat_low','pwat_high']:
+            for dist in ['1km','5km','10km']:
+                svar = f"{subname.split('_')[0]}_{dist}"
+                alldf = pd.read_parquet(f"{dataPath}{name}.pq",
+                                        columns=[svar, binvar, f'did{var}','year'])
+                alldf.index.names = ['lat','lon']
+                alldf.set_index('year',append=True,inplace=True)
+                alldf = alldf.to_xarray()
+                alldf = alldf.assign(mask = sumatra.mask(alldf))
+                alldf = alldf.where(~alldf.mask.isnull())
+                alldf = alldf.to_dataframe().dropna()
+                alldf[f"{svar}_perc"] = alldf[svar].rank()/len(alldf)
+
+                if 'low' in subname:
+                    alldf = alldf[alldf[f"{svar}_perc"]<=0.25]
+                else:
+                    alldf = alldf[alldf[f"{svar}_perc"]>0.75]
+
+                alldf[f"{binvar}_"] = res*(alldf[binvar]//res)
+                idx = []
+                subs = []
+
+                for i, sub in alldf.groupby(f"{binvar}_"):
+                    idx.append(i)
+                    subs.append(sub)
+
+                join([bootstrap_mean(sub,f"did{var}",nsample,nrepeat) for sub in subs], 
+                    idx,
+                    f"{dataPath}/bootstrapped_byregion/sumatra/{name}_{var}_{binvar}_{subname}_{dist}.csv")
